@@ -1,0 +1,26 @@
+{
+  "name": "Glow – Mi Rutina de Skincare",
+  "short_name": "Glow",
+  "description": "Tu asistente personal de skincare y cuidado personal",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff8f5",
+  "theme_color": "#f9c4d2",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "lifestyle", "beauty"],
+  "lang": "es"
+}

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#f9c4d2" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Glow" />
+  <title>Glow – Mi Rutina</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- NAV -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-view="today">
+        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+        <span>Hoy</span>
+      </button>
+      <button class="nav-btn" data-view="history">
+        <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v4l5-5-5-5v4z"/></svg>
+        <span>Historial</span>
+      </button>
+      <button class="nav-btn" data-view="routines">
+        <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+        <span>Rutinas</span>
+      </button>
+    </nav>
+
+    <!-- VIEW: TODAY -->
+    <section class="view active" id="view-today">
+      <header class="page-header">
+        <div>
+          <p class="greeting" id="greeting">Buenos días ✨</p>
+          <h1 class="page-title">Hola, Karla 🌸</h1>
+          <p class="today-date-sub" id="today-date"></p>
+        </div>
+        <div class="streak-badge">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+          <span id="streak-count">0</span>
+        </div>
+      </header>
+
+      <!-- MINI CALENDAR -->
+      <div class="mini-cal-card">
+        <div class="mini-cal-nav">
+          <button id="cal-prev">‹</button>
+          <span id="cal-month-label"></span>
+          <button id="cal-next">›</button>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+      </div>
+
+      <div class="section-label" id="lbl-morning">Rutina de mañana</div>
+      <div class="task-list" id="morning-list"></div>
+
+      <div class="section-label" id="lbl-night">Rutina de noche</div>
+      <div class="task-list" id="night-list"></div>
+
+      <div class="section-label" id="lbl-extra">Cuidados de hoy</div>
+      <div class="task-list" id="extra-list"></div>
+
+      <div class="all-done-state" id="all-done" style="display:none">
+        <span>🎉</span>
+        <p>¡Todo listo por hoy, Karla!</p>
+      </div>
+
+      <div class="empty-state" id="today-empty" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        <p>No hay cuidados para hoy.<br>¡Agrega rutinas primero!</p>
+      </div>
+    </section>
+
+    <!-- VIEW: HISTORY -->
+    <section class="view" id="view-history">
+      <header class="page-header">
+        <h1 class="page-title">Historial</h1>
+      </header>
+      <div class="calendar-nav">
+        <button id="hist-prev">‹</button>
+        <span id="hist-month-label"></span>
+        <button id="hist-next">›</button>
+      </div>
+      <div class="calendar-grid" id="hist-calendar-grid"></div>
+      <div class="cal-detail" id="cal-detail"></div>
+    </section>
+
+    <!-- VIEW: ROUTINES -->
+    <section class="view" id="view-routines">
+      <header class="page-header">
+        <h1 class="page-title">Mis Rutinas</h1>
+        <button class="add-btn" id="open-add-modal">
+          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </button>
+      </header>
+      <div id="routines-list"></div>
+    </section>
+  </div>
+
+  <!-- MODAL: Add / Edit routine -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-title">Nueva Rutina</h2>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">Nombre del cuidado</label>
+        <input class="field-input" id="care-name" placeholder="Ej: Exfoliación facial" />
+
+        <label class="field-label">Zona</label>
+        <div class="chip-group" id="zone-chips">
+          <button class="chip" data-val="Cara">Cara</button>
+          <button class="chip" data-val="Cabello">Cabello</button>
+          <button class="chip" data-val="Cuerpo">Cuerpo</button>
+          <button class="chip" data-val="Uñas">Uñas</button>
+          <button class="chip" data-val="General">General</button>
+        </div>
+
+        <label class="field-label">Momento del día</label>
+        <div class="chip-group" id="time-chips">
+          <button class="chip" data-val="Mañana">🌤 Mañana</button>
+          <button class="chip" data-val="Noche">🌙 Noche</button>
+          <button class="chip" data-val="Ambos">Ambos</button>
+        </div>
+
+        <label class="field-label">Frecuencia</label>
+        <div class="chip-group" id="freq-chips">
+          <button class="chip" data-val="Diario">Diario</button>
+          <button class="chip" data-val="Lun,Mié,Vie">L·M·V</button>
+          <button class="chip" data-val="Mar,Jue,Sáb">M·J·S</button>
+          <button class="chip" data-val="Semanal">Semanal</button>
+          <button class="chip" data-val="Quincenal">Quincenal</button>
+          <button class="chip" data-val="Mensual">Mensual</button>
+        </div>
+
+        <label class="field-label">Hora del recordatorio</label>
+        <input class="field-input" id="care-time" type="time" value="08:00" />
+
+        <label class="field-label">Emoji / Icono</label>
+        <div class="emoji-grid" id="emoji-picker">
+          <span data-e="🧴">🧴</span><span data-e="✨">✨</span><span data-e="🌸">🌸</span>
+          <span data-e="💆">💆</span><span data-e="🪷">🪷</span><span data-e="💧">💧</span>
+          <span data-e="🧼">🧼</span><span data-e="🫧">🫧</span><span data-e="🌿">🌿</span>
+          <span data-e="💅">💅</span><span data-e="🧖">🧖</span><span data-e="🌻">🌻</span>
+        </div>
+
+        <button class="primary-btn" id="save-care">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
