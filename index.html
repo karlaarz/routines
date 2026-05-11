@@ -137,6 +137,53 @@
           <button class="chip" data-val="Semanal">Semanal</button>
           <button class="chip" data-val="Quincenal">Quincenal</button>
           <button class="chip" data-val="Mensual">Mensual</button>
+          <button class="chip" data-val="Personalizado">Personalizado</button>
+        </div>
+
+        <div id="quincenal-day-picker" style="display:none">
+          <label class="field-label" style="margin-top:8px">Día de la semana</label>
+          <div class="chip-group">
+            <button class="chip day-chip" data-day="0">Dom</button>
+            <button class="chip day-chip" data-day="1">Lun</button>
+            <button class="chip day-chip" data-day="2">Mar</button>
+            <button class="chip day-chip" data-day="3">Mié</button>
+            <button class="chip day-chip" data-day="4">Jue</button>
+            <button class="chip day-chip" data-day="5">Vie</button>
+            <button class="chip day-chip" data-day="6">Sáb</button>
+          </div>
+        </div>
+
+        <div id="mensual-day-picker" style="display:none">
+          <label class="field-label" style="margin-top:8px">Día del mes (1–28)</label>
+          <input class="field-input" id="mensual-day-input" type="number" min="1" max="28" placeholder="Ej: 15" />
+        </div>
+
+        <div id="personalizado-picker" style="display:none">
+          <label class="field-label" style="margin-top:8px">Repetir cada</label>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input class="field-input" id="custom-value-input" type="number" min="1" max="99" value="1" style="width:72px;flex-shrink:0" />
+            <div class="chip-group" id="custom-unit-chips">
+              <button class="chip unit-chip" data-unit="dias">Días</button>
+              <button class="chip unit-chip" data-unit="semanas">Semanas</button>
+              <button class="chip unit-chip" data-unit="meses">Meses</button>
+            </div>
+          </div>
+          <div id="custom-weekday-picker" style="display:none;margin-top:8px">
+            <label class="field-label">Día de la semana</label>
+            <div class="chip-group">
+              <button class="chip cwd-chip" data-day="0">Dom</button>
+              <button class="chip cwd-chip" data-day="1">Lun</button>
+              <button class="chip cwd-chip" data-day="2">Mar</button>
+              <button class="chip cwd-chip" data-day="3">Mié</button>
+              <button class="chip cwd-chip" data-day="4">Jue</button>
+              <button class="chip cwd-chip" data-day="5">Vie</button>
+              <button class="chip cwd-chip" data-day="6">Sáb</button>
+            </div>
+          </div>
+          <div id="custom-monthday-picker" style="display:none;margin-top:8px">
+            <label class="field-label">Día del mes (1–28)</label>
+            <input class="field-input" id="custom-monthday-input" type="number" min="1" max="28" placeholder="Ej: 15" />
+          </div>
         </div>
 
         <label class="field-label">Hora del recordatorio</label>

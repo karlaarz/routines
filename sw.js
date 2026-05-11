@@ -24,41 +24,6 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// ── SCHEDULED NOTIFICATIONS ────────────────────────────────────
-let scheduledTimers = [];
-
-self.addEventListener('message', e => {
-  if (e.data?.type !== 'SCHEDULE') return;
-  // clear previous timers
-  scheduledTimers.forEach(t => clearTimeout(t));
-  scheduledTimers = [];
-
-  const routines = e.data.routines || [];
-  const now = new Date();
-
-  routines.forEach(r => {
-    if (!r.reminderTime) return;
-    const [hh, mm] = r.reminderTime.split(':').map(Number);
-    const target = new Date();
-    target.setHours(hh, mm, 0, 0);
-    const delay = target - now;
-    if (delay <= 0) return; // already passed today
-
-    const t = setTimeout(() => {
-      self.registration.showNotification(`Glow ✨ – ${r.name}`, {
-        body: `Tu cuidado de ${r.zone.toLowerCase()} te espera 🌸`,
-        icon: '/icons/icon-192.png',
-        badge: '/icons/icon-192.png',
-        tag: r.id,
-        vibrate: [200, 100, 200],
-        data: { url: '/' }
-      });
-    }, delay);
-
-    scheduledTimers.push(t);
-  });
-});
-
 // ── NOTIFICATION CLICK ─────────────────────────────────────────
 self.addEventListener('notificationclick', e => {
   e.notification.close();

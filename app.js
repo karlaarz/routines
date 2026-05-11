@@ -27,17 +27,58 @@ function isRoutineActiveOnDate(r, date) {
     return date.getDay() === created.getDay();
   }
   if (freq === 'Quincenal') {
+    const weekDay = r.weekDay !== undefined ? r.weekDay : new Date(parseInt(r.id)).getDay();
+    if (date.getDay() !== weekDay) return false;
     const created = new Date(parseInt(r.id));
-    const diff = Math.floor((date - created) / (1000*60*60*24));
-    return diff >= 0 && diff % 14 === 0;
+    const offset = (weekDay - created.getDay() + 7) % 7;
+    const firstOcc = new Date(created); firstOcc.setHours(0, 0, 0, 0);
+    firstOcc.setDate(firstOcc.getDate() + offset);
+    const d0 = new Date(date); d0.setHours(0, 0, 0, 0);
+    const weeks = Math.round((d0 - firstOcc) / (7 * 86400000));
+    return weeks >= 0 && weeks % 2 === 0;
   }
   if (freq === 'Mensual') {
+    const dayOfMonth = r.monthDay !== undefined ? r.monthDay : new Date(parseInt(r.id)).getDate();
+    return date.getDate() === dayOfMonth;
+  }
+  if (freq === 'Personalizado') {
+    const val = r.customValue || 1;
+    const unit = r.customUnit || 'dias';
     const created = new Date(parseInt(r.id));
-    return date.getDate() === created.getDate();
+    if (unit === 'dias') {
+      const d0 = new Date(date); d0.setHours(0,0,0,0);
+      const c0 = new Date(created); c0.setHours(0,0,0,0);
+      const diff = Math.round((d0 - c0) / 86400000);
+      return diff >= 0 && diff % val === 0;
+    }
+    if (unit === 'semanas') {
+      const weekDay = r.customWeekDay !== undefined ? r.customWeekDay : created.getDay();
+      if (date.getDay() !== weekDay) return false;
+      const offset = (weekDay - created.getDay() + 7) % 7;
+      const firstOcc = new Date(created); firstOcc.setHours(0,0,0,0);
+      firstOcc.setDate(firstOcc.getDate() + offset);
+      const d0 = new Date(date); d0.setHours(0,0,0,0);
+      const weeks = Math.round((d0 - firstOcc) / (7 * 86400000));
+      return weeks >= 0 && weeks % val === 0;
+    }
+    if (unit === 'meses') {
+      const dayOfMonth = r.customMonthDay !== undefined ? r.customMonthDay : created.getDate();
+      if (date.getDate() !== dayOfMonth) return false;
+      const monthsDiff = (date.getFullYear() - created.getFullYear()) * 12 + (date.getMonth() - created.getMonth());
+      return monthsDiff >= 0 && monthsDiff % val === 0;
+    }
+    return false;
   }
   return freq.split(',').includes(dayName);
 }
 function isRoutineActiveToday(r) { return isRoutineActiveOnDate(r, new Date()); }
+
+function freqLabel(r) {
+  if (r.freq !== 'Personalizado') return r.freq;
+  const val = r.customValue || 1;
+  const map = { dias: val === 1 ? 'día' : 'días', semanas: val === 1 ? 'semana' : 'semanas', meses: val === 1 ? 'mes' : 'meses' };
+  return `Cada ${val} ${map[r.customUnit] || r.customUnit || ''}`.trim();
+}
 
 // ── TODAY VIEW ─────────────────────────────────────────────────
 function renderToday() {
@@ -88,7 +129,7 @@ function renderTaskList(containerId, routines) {
       <span class="task-emoji">${r.emoji}</span>
       <div class="task-info">
         <div class="task-name">${r.name}</div>
-        <div class="task-meta">${r.zone} · ${r.freq} · ${r.reminderTime}</div>
+        <div class="task-meta">${r.zone} · ${freqLabel(r)} · ${r.reminderTime}</div>
       </div>
       <button class="task-check" onclick="markDone('${r.id}')">
         <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
@@ -263,7 +304,7 @@ function renderRoutines() {
         <div class="routine-tags">
           <span class="tag">${r.zone}</span>
           <span class="tag yellow">${r.timeOfDay}</span>
-          <span class="tag">${r.freq}</span>
+          <span class="tag">${freqLabel(r)}</span>
           <span class="tag">⏰ ${r.reminderTime}</span>
         </div>
       </div>
@@ -295,14 +336,21 @@ function deleteRoutine(id) {
 
 // ── MODAL ──────────────────────────────────────────────────────
 let selectedZone = '', selectedTime = '', selectedFreq = '', selectedEmoji = '🧴';
-let editingId = null;
+let editingId = null, selectedWeekDay = null, selectedMonthDay = null;
+let selectedCustomValue = 1, selectedCustomUnit = null, selectedCustomWeekDay = null, selectedCustomMonthDay = null;
 
 function openModal(routine = null) {
-  editingId     = routine ? routine.id      : null;
-  selectedZone  = routine ? routine.zone      : '';
-  selectedTime  = routine ? routine.timeOfDay : '';
-  selectedFreq  = routine ? routine.freq      : '';
-  selectedEmoji = routine ? routine.emoji     : '🧴';
+  editingId      = routine ? routine.id        : null;
+  selectedZone   = routine ? routine.zone      : '';
+  selectedTime   = routine ? routine.timeOfDay : '';
+  selectedFreq   = routine ? routine.freq      : '';
+  selectedEmoji  = routine ? routine.emoji     : '🧴';
+  selectedWeekDay      = routine?.weekDay ?? null;
+  selectedMonthDay     = routine?.monthDay ?? null;
+  selectedCustomValue  = routine?.customValue ?? 1;
+  selectedCustomUnit   = routine?.customUnit ?? null;
+  selectedCustomWeekDay  = routine?.customWeekDay ?? null;
+  selectedCustomMonthDay = routine?.customMonthDay ?? null;
 
   document.getElementById('modal-title').textContent = routine ? 'Editar Rutina' : 'Nueva Rutina';
   document.getElementById('save-care').textContent   = routine ? 'Guardar cambios' : 'Guardar';
@@ -313,6 +361,24 @@ function openModal(routine = null) {
   if (selectedZone) document.querySelector(`#zone-chips .chip[data-val="${selectedZone}"]`)?.classList.add('selected');
   if (selectedTime) document.querySelector(`#time-chips .chip[data-val="${selectedTime}"]`)?.classList.add('selected');
   if (selectedFreq) document.querySelector(`#freq-chips .chip[data-val="${selectedFreq}"]`)?.classList.add('selected');
+
+  const dayPicker = document.getElementById('quincenal-day-picker');
+  dayPicker.style.display = selectedFreq === 'Quincenal' ? '' : 'none';
+  document.querySelectorAll('.day-chip').forEach(c =>
+    c.classList.toggle('selected', parseInt(c.dataset.day) === selectedWeekDay));
+
+  const mensualPicker = document.getElementById('mensual-day-picker');
+  mensualPicker.style.display = selectedFreq === 'Mensual' ? '' : 'none';
+  document.getElementById('mensual-day-input').value = selectedMonthDay ?? '';
+
+  const customPicker = document.getElementById('personalizado-picker');
+  customPicker.style.display = selectedFreq === 'Personalizado' ? '' : 'none';
+  document.getElementById('custom-value-input').value = selectedCustomValue;
+  document.querySelectorAll('.unit-chip').forEach(c => c.classList.toggle('selected', c.dataset.unit === selectedCustomUnit));
+  document.getElementById('custom-weekday-picker').style.display  = selectedCustomUnit === 'semanas' ? '' : 'none';
+  document.getElementById('custom-monthday-picker').style.display = selectedCustomUnit === 'meses'   ? '' : 'none';
+  document.querySelectorAll('.cwd-chip').forEach(c => c.classList.toggle('selected', parseInt(c.dataset.day) === selectedCustomWeekDay));
+  document.getElementById('custom-monthday-input').value = selectedCustomMonthDay ?? '';
 
   document.querySelectorAll('.emoji-grid span').forEach(e =>
     e.classList.toggle('selected', e.dataset.e === selectedEmoji));
@@ -344,7 +410,53 @@ document.querySelectorAll('#time-chips .chip').forEach(btn => btn.addEventListen
 document.querySelectorAll('#freq-chips .chip').forEach(btn => btn.addEventListener('click', () => {
   document.querySelectorAll('#freq-chips .chip').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected'); selectedFreq = btn.dataset.val;
+  const dayPicker = document.getElementById('quincenal-day-picker');
+  dayPicker.style.display = selectedFreq === 'Quincenal' ? '' : 'none';
+  if (selectedFreq !== 'Quincenal') { selectedWeekDay = null; document.querySelectorAll('.day-chip').forEach(b => b.classList.remove('selected')); }
+
+  const mensualPicker = document.getElementById('mensual-day-picker');
+  mensualPicker.style.display = selectedFreq === 'Mensual' ? '' : 'none';
+  if (selectedFreq !== 'Mensual') { selectedMonthDay = null; document.getElementById('mensual-day-input').value = ''; }
+
+  const customPicker = document.getElementById('personalizado-picker');
+  customPicker.style.display = selectedFreq === 'Personalizado' ? '' : 'none';
+  if (selectedFreq !== 'Personalizado') {
+    selectedCustomValue = 1; selectedCustomUnit = null; selectedCustomWeekDay = null; selectedCustomMonthDay = null;
+    document.querySelectorAll('.unit-chip').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.cwd-chip').forEach(b => b.classList.remove('selected'));
+    document.getElementById('custom-weekday-picker').style.display = 'none';
+    document.getElementById('custom-monthday-picker').style.display = 'none';
+  }
 }));
+document.querySelectorAll('.day-chip').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.day-chip').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected'); selectedWeekDay = parseInt(btn.dataset.day);
+}));
+document.getElementById('mensual-day-input').addEventListener('input', e => {
+  const v = parseInt(e.target.value);
+  selectedMonthDay = (v >= 1 && v <= 28) ? v : null;
+});
+document.querySelectorAll('.unit-chip').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.unit-chip').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected'); selectedCustomUnit = btn.dataset.unit;
+  document.getElementById('custom-weekday-picker').style.display  = selectedCustomUnit === 'semanas' ? '' : 'none';
+  document.getElementById('custom-monthday-picker').style.display = selectedCustomUnit === 'meses'   ? '' : 'none';
+  selectedCustomWeekDay = null; selectedCustomMonthDay = null;
+  document.querySelectorAll('.cwd-chip').forEach(b => b.classList.remove('selected'));
+  document.getElementById('custom-monthday-input').value = '';
+}));
+document.querySelectorAll('.cwd-chip').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.cwd-chip').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected'); selectedCustomWeekDay = parseInt(btn.dataset.day);
+}));
+document.getElementById('custom-value-input').addEventListener('input', e => {
+  const v = parseInt(e.target.value);
+  selectedCustomValue = (v >= 1 && v <= 99) ? v : 1;
+});
+document.getElementById('custom-monthday-input').addEventListener('input', e => {
+  const v = parseInt(e.target.value);
+  selectedCustomMonthDay = (v >= 1 && v <= 28) ? v : null;
+});
 document.querySelectorAll('.emoji-grid span').forEach(span => span.addEventListener('click', () => {
   document.querySelectorAll('.emoji-grid span').forEach(s => s.classList.remove('selected'));
   span.classList.add('selected'); selectedEmoji = span.dataset.e;
@@ -357,19 +469,38 @@ document.getElementById('save-care').addEventListener('click', () => {
   if (!selectedZone) { showToast('Elige una zona'); return; }
   if (!selectedTime) { showToast('Elige mañana o noche'); return; }
   if (!selectedFreq) { showToast('Elige una frecuencia'); return; }
+  if (selectedFreq === 'Quincenal' && selectedWeekDay === null) { showToast('Elige el día de la semana'); return; }
+  if (selectedFreq === 'Mensual' && !selectedMonthDay) { showToast('Indica el día del mes (1–28)'); return; }
+  if (selectedFreq === 'Personalizado') {
+    if (!selectedCustomUnit)                                                { showToast('Elige días, semanas o meses'); return; }
+    if (!selectedCustomValue || selectedCustomValue < 1)                    { showToast('Indica cada cuánto'); return; }
+    if (selectedCustomUnit === 'semanas' && selectedCustomWeekDay === null)  { showToast('Elige el día de la semana'); return; }
+    if (selectedCustomUnit === 'meses'   && !selectedCustomMonthDay)         { showToast('Indica el día del mes (1–28)'); return; }
+  }
 
   if (editingId) {
     const r = state.routines.find(r => r.id === editingId);
     if (r) {
       r.name = name; r.emoji = selectedEmoji; r.zone = selectedZone;
       r.timeOfDay = selectedTime; r.freq = selectedFreq; r.reminderTime = time;
+      r.weekDay        = selectedFreq === 'Quincenal'     ? selectedWeekDay        : undefined;
+      r.monthDay       = selectedFreq === 'Mensual'       ? selectedMonthDay       : undefined;
+      r.customValue    = selectedFreq === 'Personalizado' ? selectedCustomValue    : undefined;
+      r.customUnit     = selectedFreq === 'Personalizado' ? selectedCustomUnit     : undefined;
+      r.customWeekDay  = (selectedFreq === 'Personalizado' && selectedCustomUnit === 'semanas') ? selectedCustomWeekDay  : undefined;
+      r.customMonthDay = (selectedFreq === 'Personalizado' && selectedCustomUnit === 'meses')   ? selectedCustomMonthDay : undefined;
     }
     showToast('✏️ Rutina actualizada');
   } else {
     state.routines.push({
       id: Date.now().toString(), name, emoji: selectedEmoji,
       zone: selectedZone, timeOfDay: selectedTime,
-      freq: selectedFreq, reminderTime: time, enabled: true
+      freq: selectedFreq, reminderTime: time, enabled: true,
+      ...(selectedFreq === 'Quincenal'     ? { weekDay: selectedWeekDay }                                                     : {}),
+      ...(selectedFreq === 'Mensual'       ? { monthDay: selectedMonthDay }                                                   : {}),
+      ...(selectedFreq === 'Personalizado' ? { customValue: selectedCustomValue, customUnit: selectedCustomUnit,
+          ...(selectedCustomUnit === 'semanas' ? { customWeekDay: selectedCustomWeekDay }   : {}),
+          ...(selectedCustomUnit === 'meses'   ? { customMonthDay: selectedCustomMonthDay } : {}) } : {})
     });
     showToast('✨ Rutina guardada');
   }
@@ -403,18 +534,45 @@ function showToast(msg) {
 }
 
 // ── NOTIFICATIONS ──────────────────────────────────────────────
+let _notifTimers = [], _midnightTimer = null;
+
 async function requestNotifications() {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  if (!('Notification' in window)) return;
   const perm = await Notification.requestPermission();
   state.notificationsEnabled = perm === 'granted';
   save();
   if (perm === 'granted') scheduleNotifications();
 }
+
 function scheduleNotifications() {
-  if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.ready.then(reg => {
-    reg.active?.postMessage({ type: 'SCHEDULE', routines: state.routines.filter(isRoutineActiveToday) });
+  _notifTimers.forEach(clearTimeout);
+  _notifTimers = [];
+  clearTimeout(_midnightTimer);
+
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const now = new Date();
+  state.routines.filter(isRoutineActiveToday).forEach(r => {
+    if (!r.reminderTime) return;
+    const [hh, mm] = r.reminderTime.split(':').map(Number);
+    const target = new Date(); target.setHours(hh, mm, 0, 0);
+    const delay = target - now;
+    if (delay <= 0) return;
+    const t = setTimeout(async () => {
+      const opts = { body: `Tu cuidado de ${r.zone.toLowerCase()} te espera 🌸`, icon: '/icons/icon-192.png', tag: r.id, vibrate: [200, 100, 200], data: { url: '/' } };
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        reg.showNotification(`Glow ✨ – ${r.name}`, opts);
+      } else {
+        new Notification(`Glow ✨ – ${r.name}`, opts);
+      }
+    }, delay);
+    _notifTimers.push(t);
   });
+
+  // Re-schedule at midnight so the next day's routines are picked up
+  const midnight = new Date(); midnight.setHours(24, 0, 0, 0);
+  _midnightTimer = setTimeout(scheduleNotifications, midnight - now + 1000);
 }
 
 if ('serviceWorker' in navigator) {
