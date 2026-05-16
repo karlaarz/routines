@@ -544,33 +544,40 @@ async function requestNotifications() {
   if (perm === 'granted') scheduleNotifications();
 }
 
-function scheduleNotifications() {
+async function scheduleNotifications() {
   _notifTimers.forEach(clearTimeout);
   _notifTimers = [];
   clearTimeout(_midnightTimer);
 
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-  const now = new Date();
-  state.routines.filter(isRoutineActiveToday).forEach(r => {
-    if (!r.reminderTime) return;
-    const [hh, mm] = r.reminderTime.split(':').map(Number);
-    const target = new Date(); target.setHours(hh, mm, 0, 0);
-    const delay = target - now;
-    if (delay <= 0) return;
-    const t = setTimeout(async () => {
-      const opts = { body: `Tu cuidado de ${r.zone.toLowerCase()} te espera 🌸`, icon: '/icons/icon-192.png', tag: r.id, vibrate: [200, 100, 200], data: { url: '/' } };
-      if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.ready;
-        reg.showNotification(`Glow ✨ – ${r.name}`, opts);
-      } else {
-        new Notification(`Glow ✨ – ${r.name}`, opts);
-      }
-    }, delay);
-    _notifTimers.push(t);
-  });
+  const todayRoutines = state.routines.filter(isRoutineActiveToday);
+
+  if ('serviceWorker' in navigator) {
+    const reg = await navigator.serviceWorker.ready;
+    reg.active?.postMessage({ type: 'SCHEDULE', routines: todayRoutines });
+  } else {
+    const now = new Date();
+    todayRoutines.forEach(r => {
+      if (!r.reminderTime) return;
+      const [hh, mm] = r.reminderTime.split(':').map(Number);
+      const target = new Date(); target.setHours(hh, mm, 0, 0);
+      const delay = target - now;
+      if (delay <= 0) return;
+      const t = setTimeout(() => {
+        new Notification(`Glow ✨ – ${r.name}`, {
+          body: `Tu cuidado de ${r.zone.toLowerCase()} te espera 🌸`,
+          icon: '/icons/icon-192.png',
+          tag: r.id,
+          vibrate: [200, 100, 200]
+        });
+      }, delay);
+      _notifTimers.push(t);
+    });
+  }
 
   // Re-schedule at midnight so the next day's routines are picked up
+  const now = new Date();
   const midnight = new Date(); midnight.setHours(24, 0, 0, 0);
   _midnightTimer = setTimeout(scheduleNotifications, midnight - now + 1000);
 }
